@@ -146,7 +146,19 @@ function sha256(str) {
     }).join('');
   });
 }
-
+// ─── UTF-8 safe Base64 ───────────────────────────────────────
+function utf8ToBase64(str) {
+  var bytes = new TextEncoder().encode(str);
+  var bin = '';
+  for (var i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+  return btoa(bin);
+}
+function base64ToUtf8(b64) {
+  var bin = atob(b64);
+  var bytes = new Uint8Array(bin.length);
+  for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new TextDecoder().decode(bytes);
+}
 // ─── XOR encrypt/decrypt for token storage ───────────────────────
 function xorCrypt(text, key) {
   var result = [];
@@ -297,7 +309,7 @@ function loadAds() {
   .then(function(r) { if (!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
   .then(function(data) {
     window._fileSha = data.sha;
-    var content = JSON.parse(atob(data.content));
+    var content = JSON.parse(base64ToUtf8(data.content));
     renderSlots(content.ads);
     showMsg('admin-msg', '✅ โหลดข้อมูลสำเร็จ!', true);
   })
@@ -310,7 +322,7 @@ function saveAds() {
 
   var ads = getAdsFromForm();
   var json = JSON.stringify({ ads: ads }, null, 2) + '\n';
-  var encoded = btoa(unescape(encodeURIComponent(json)));
+  var encoded = utf8ToBase64(json);
   var body = { message: 'Update ads via admin', content: encoded, branch: BRANCH };
   if (window._fileSha) body.sha = window._fileSha;
 
