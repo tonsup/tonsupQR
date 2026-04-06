@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin - จัดการโฆษณา tonsupQR</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f0f4f8;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    .card {
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.10);
+      padding: 2rem 2.5rem;
+      width: 100%;
+      max-width: 560px;
+    }
+    h1 {
+      font-size: 1.3rem;
+      color: #1a237e;
+      margin-bottom: 0.5rem;
+      text-align: center;
+    }
+    .subtitle {
+      font-size: 0.82rem;
+      color: #888;
+      text-align: center;
+      margin-bottom: 1.5rem;
+    }
+    label {
+      display: block;
+      font-size: 0.85rem;
+      color: #555;
+      margin-bottom: 0.2rem;
+      margin-top: 0.8rem;
+    }
+    input[type="text"], input[type="password"] {
+      width: 100%;
+      padding: 0.5rem 0.8rem;
+      border: 1.5px solid #c5cae9;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      outline: none;
+    }
+    input:focus { border-color: #3949ab; }
+    .hint { font-size: 0.75rem; color: #aaa; margin-top: 0.2rem; }
+    .ad-group {
+      background: #f5f5f5;
+      border-radius: 10px;
+      padding: 1rem;
+      margin-top: 1rem;
+      position: relative;
+    }
+    .ad-group-title {
+      font-size: 0.9rem;
+      color: #333;
+      font-weight: 600;
+      margin-bottom: 0.3rem;
+    }
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+    }
+    .toggle-row input[type="checkbox"] {
+      width: 18px; height: 18px; cursor: pointer;
+    }
+    .toggle-row label { margin: 0; font-size: 0.85rem; }
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 0.7rem;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 1.5rem;
+      transition: background 0.2s;
+    }
+    .btn-save { background: #3949ab; color: #fff; }
+    .btn-save:hover { background: #283593; }
+    .btn-load { background: #43a047; color: #fff; margin-top: 0.8rem; }
+    .btn-load:hover { background: #2e7d32; }
+    .msg {
+      text-align: center;
+      font-size: 0.9rem;
+      margin-top: 1rem;
+      padding: 0.5rem;
+      border-radius: 8px;
+    }
+    .msg-ok { background: #e8f5e9; color: #2e7d32; }
+    .msg-err { background: #ffebee; color: #c62828; }
+    .token-section {
+      background: #e8eaf6;
+      border-radius: 10px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+    }
+    .preview {
+      margin-top: 1rem;
+      border-top: 1px solid #e0e0e0;
+      padding-top: 0.8rem;
+    }
+    .preview-title { font-size: 0.85rem; color: #888; margin-bottom: 0.5rem; }
+    .preview-ad {
+      padding: 0.5rem 0.8rem;
+      background: linear-gradient(135deg, #fff8e1 0%, #fff3e0 100%);
+      border: 1px solid #ffe0b2;
+      border-radius: 8px;
+      color: #e65100;
+      font-size: 0.85rem;
+      text-align: center;
+      margin-bottom: 0.3rem;
+    }
+    a { color: #3949ab; }
+  </style>
+</head>
+<body>
+<div class="card">
+  <h1>⚙️ จัดการโฆษณา tonsupQR</h1>
+  <p class="subtitle">แก้ไขข้อความโฆษณาบนหน้า QR Generator</p>
+
+  <!-- Token -->
+  <div class="token-section">
+    <label>GitHub Token <span style="color:#c62828">*</span></label>
+    <input type="password" id="gh-token" placeholder="ghp_xxxx..." />
+    <div class="hint">ต้องมี repo scope — <a href="https://github.com/settings/tokens/new?scopes=repo&description=tonsupQR-admin" target="_blank">สร้าง token</a></div>
+    <div class="hint">Token จะเก็บไว้ใน browser นี้เท่านั้น (localStorage)</div>
+  </div>
+
+  <button class="btn btn-load" onclick="loadAds()">📥 โหลดข้อมูลปัจจุบัน</button>
+
+  <!-- Ad slots -->
+  <div id="ad-slots"></div>
+
+  <!-- Preview -->
+  <div class="preview" id="preview" style="display:none">
+    <div class="preview-title">👁️ ตัวอย่าง:</div>
+    <div id="preview-content"></div>
+  </div>
+
+  <button class="btn btn-save" onclick="saveAds()">💾 บันทึกและอัพเดท</button>
+
+  <div id="msg"></div>
+</div>
+
+<script>
+var REPO_OWNER = 'tonsup';
+var REPO_NAME = 'tonsupQR';
+var FILE_PATH = 'ads.json';
+var BRANCH = 'main';
+var NUM_SLOTS = 3;
+
+// Restore token from localStorage
+(function() {
+  var saved = localStorage.getItem('tonsupQR_gh_token');
+  if (saved) document.getElementById('gh-token').value = saved;
+})();
+
+function getToken() {
+  var t = document.getElementById('gh-token').value.trim();
+  if (t) localStorage.setItem('tonsupQR_gh_token', t);
+  return t;
+}
+
+function showMsg(text, ok) {
+  var el = document.getElementById('msg');
+  el.className = 'msg ' + (ok ? 'msg-ok' : 'msg-err');
+  el.textContent = text;
+  setTimeout(function() { el.textContent = ''; el.className = ''; }, 5000);
+}
+
+function renderSlots(ads) {
+  var container = document.getElementById('ad-slots');
+  var html = '';
+  for (var i = 0; i < NUM_SLOTS; i++) {
+    var ad = (ads && ads[i]) || { text: '', link: '', enabled: false };
+    html += '<div class="ad-group">';
+    html += '<div class="ad-group-title">โฆษณาที่ ' + (i + 1) + '</div>';
+    html += '<label>ข้อความ</label>';
+    html += '<input type="text" id="ad-text-' + i + '" value="' + escapeAttr(ad.text) + '" placeholder="เช่น 🎉 โปรโมชั่นพิเศษ!" oninput="updatePreview()" />';
+    html += '<label>Link (ไม่บังคับ)</label>';
+    html += '<input type="text" id="ad-link-' + i + '" value="' + escapeAttr(ad.link) + '" placeholder="https://..." oninput="updatePreview()" />';
+    html += '<div class="toggle-row">';
+    html += '<input type="checkbox" id="ad-on-' + i + '"' + (ad.enabled ? ' checked' : '') + ' onchange="updatePreview()" />';
+    html += '<label for="ad-on-' + i + '">เปิดใช้งาน</label>';
+    html += '</div>';
+    html += '</div>';
+  }
+  container.innerHTML = html;
+  updatePreview();
+}
+
+function escapeAttr(s) {
+  if (!s) return '';
+  return s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function escapeHtml(s) {
+  if (!s) return '';
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function getAdsFromForm() {
+  var ads = [];
+  for (var i = 0; i < NUM_SLOTS; i++) {
+    ads.push({
+      text: document.getElementById('ad-text-' + i).value.trim(),
+      link: document.getElementById('ad-link-' + i).value.trim(),
+      enabled: document.getElementById('ad-on-' + i).checked
+    });
+  }
+  return ads;
+}
+
+function updatePreview() {
+  var ads = getAdsFromForm();
+  var html = '';
+  var hasAny = false;
+  ads.forEach(function(ad) {
+    if (!ad.enabled || !ad.text) return;
+    hasAny = true;
+    html += '<div class="preview-ad">' + escapeHtml(ad.text) + (ad.link ? ' 🔗' : '') + '</div>';
+  });
+  var el = document.getElementById('preview');
+  el.style.display = hasAny ? 'block' : 'none';
+  document.getElementById('preview-content').innerHTML = html;
+}
+
+function loadAds() {
+  var token = getToken();
+  if (!token) { showMsg('กรุณากรอก GitHub Token', false); return; }
+
+  fetch('https://api.github.com/repos/' + REPO_OWNER + '/' + REPO_NAME + '/contents/' + FILE_PATH + '?ref=' + BRANCH, {
+    headers: { 'Authorization': 'token ' + token, 'Accept': 'application/vnd.github.v3+json' }
+  })
+  .then(function(r) {
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
+  })
+  .then(function(data) {
+    window._fileSha = data.sha;
+    var content = JSON.parse(atob(data.content));
+    renderSlots(content.ads);
+    showMsg('✅ โหลดข้อมูลสำเร็จ!', true);
+  })
+  .catch(function(e) {
+    showMsg('❌ โหลดไม่ได้: ' + e.message, false);
+    renderSlots([]);
+  });
+}
+
+function saveAds() {
+  var token = getToken();
+  if (!token) { showMsg('กรุณากรอก GitHub Token', false); return; }
+
+  var ads = getAdsFromForm();
+  var json = JSON.stringify({ ads: ads }, null, 2) + '\n';
+  var encoded = btoa(unescape(encodeURIComponent(json)));
+
+  var body = {
+    message: 'Update ads via admin',
+    content: encoded,
+    branch: BRANCH
+  };
+  if (window._fileSha) body.sha = window._fileSha;
+
+  fetch('https://api.github.com/repos/' + REPO_OWNER + '/' + REPO_NAME + '/contents/' + FILE_PATH, {
+    method: 'PUT',
+    headers: {
+      'Authorization': 'token ' + token,
+      'Accept': 'application/vnd.github.v3+json',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(body)
+  })
+  .then(function(r) {
+    if (!r.ok) return r.json().then(function(d) { throw new Error(d.message || 'HTTP ' + r.status); });
+    return r.json();
+  })
+  .then(function(data) {
+    window._fileSha = data.content.sha;
+    showMsg('✅ บันทึกสำเร็จ! หน้า QR จะอัพเดทภายใน 1-2 นาที', true);
+  })
+  .catch(function(e) {
+    showMsg('❌ บันทึกไม่ได้: ' + e.message, false);
+  });
+}
+
+// Init with empty slots
+renderSlots([]);
+</script>
+</body>
+</html>

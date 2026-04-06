@@ -147,10 +147,45 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
       margin-top: 0.5rem;
     }
     .section-hidden { display: none; }
+    /* Ad banner */
+    .ad-banner {
+      margin-bottom: 1rem;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .ad-item {
+      display: block;
+      padding: 0.6rem 1rem;
+      background: linear-gradient(135deg, #fff8e1 0%, #fff3e0 100%);
+      border: 1px solid #ffe0b2;
+      border-radius: 8px;
+      color: #e65100;
+      text-decoration: none;
+      font-size: 0.88rem;
+      text-align: center;
+      margin-bottom: 0.4rem;
+      transition: background 0.2s;
+    }
+    .ad-item:last-child { margin-bottom: 0; }
+    .ad-item:hover { background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%); }
+    .ad-item-nolink {
+      padding: 0.6rem 1rem;
+      background: linear-gradient(135deg, #fff8e1 0%, #fff3e0 100%);
+      border: 1px solid #ffe0b2;
+      border-radius: 8px;
+      color: #e65100;
+      font-size: 0.88rem;
+      text-align: center;
+      margin-bottom: 0.4rem;
+    }
+    .ad-item-nolink:last-child { margin-bottom: 0; }
   </style>
 </head>
 <body>
 <div class="card">
+  <!-- Ad Banner -->
+  <div class="ad-banner" id="ad-banner"></div>
+
   <h1>🏦 สร้าง QR Code รับเงิน</h1>
 
   <!-- Tabs -->
@@ -455,6 +490,27 @@ function downloadAsSVG(svg) {
   link.href = dataUri;
   link.click();
 }
+
+// ─── Load Ads ────────────────────────────────────────────────────
+(function loadAds() {
+  fetch('./ads.json?t=' + Date.now())
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var banner = document.getElementById('ad-banner');
+      if (!data.ads || !data.ads.length) return;
+      var html = '';
+      data.ads.forEach(function(ad) {
+        if (!ad.enabled || !ad.text) return;
+        if (ad.link) {
+          html += '<a class="ad-item" href="' + ad.link + '" target="_blank" rel="noopener">' + ad.text + '</a>';
+        } else {
+          html += '<div class="ad-item-nolink">' + ad.text + '</div>';
+        }
+      });
+      banner.innerHTML = html;
+    })
+    .catch(function() {});
+})();
 </script>
 </body>
 </html>

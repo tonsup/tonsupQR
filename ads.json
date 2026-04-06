@@ -1,0 +1,19 @@
+{
+  "ads": [
+    {
+      "text": "🎉 ร้านต้นสุพ — สินค้าคุณภาพ ราคาถูก!",
+      "link": "https://tonsup.github.io/tonmai/",
+      "enabled": true
+    },
+    {
+      "text": "",
+      "link": "",
+      "enabled": false
+    },
+    {
+      "text": "",
+      "link": "",
+      "enabled": false
+    }
+  ]
+}
